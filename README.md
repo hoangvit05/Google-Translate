@@ -10,16 +10,17 @@
 
 ## 🚀 Các tính năng chính
 1. **Dịch văn bản đa ngôn ngữ:** Hỗ trợ dịch giữa Tiếng Anh, Tiếng Việt, Tiếng Pháp, Tiếng Nhật, Tiếng Hàn và Tiếng Trung. Gọi trực tiếp từ MyMemory API miễn phí.
-2. **Nhận diện giọng nói (Speech-to-Text):** Hỗ trợ thu âm giọng nói để chuyển thành văn bản cần dịch.
-3. **Phát âm văn bản (Text-to-Speech):** Đọc to văn bản gốc và kết quả dịch bằng giọng nói chuẩn bản xứ.
-4. **Đổi chiều ngôn ngữ nhanh (Swap):** Đảo ngược ngôn ngữ nguồn và ngôn ngữ đích tức thì.
+2. **Phát âm văn bản (Text-to-Speech):** Đọc to văn bản gốc và kết quả dịch bằng giọng nói chuẩn bản xứ.
+3. **Đổi chiều ngôn ngữ nhanh (Swap):** Đảo ngược ngôn ngữ nguồn, ngôn ngữ đích và cả nội dung văn bản tức thì.
+4. **Sao chép văn bản (Copy to Clipboard):** Sao chép kết quả dịch sang bộ nhớ tạm chỉ với một chạm.
+5. **Xóa nhanh (Clear text):** Nút xóa nhanh tự động hiển thị khi người dùng nhập văn bản để làm sạch ô nhập liệu.
 
 ---
 
 ## 🛠️ Cấu trúc dự án
-* `app/src/main/java/com/example/googletranslateclone/MainActivity.kt`: Xử lý logic giao diện, gọi API dịch thuật và tương tác TTS/Speech.
+* `app/src/main/java/com/example/googletranslateclone/MainActivity.kt`: Xử lý logic giao diện, gọi API dịch thuật và tương tác Text-to-Speech.
 * `app/src/main/res/layout/activity_main.xml`: Giao diện XML của ứng dụng.
-* `app/src/main/AndroidManifest.xml`: Cấu hình quyền `INTERNET`, `RECORD_AUDIO` và cấu hình ứng dụng.
+* `app/src/main/AndroidManifest.xml`: Cấu hình quyền `INTERNET` và cấu hình ứng dụng.
 
 ---
 
