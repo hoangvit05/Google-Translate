@@ -4,23 +4,23 @@
 
 ## 👥 Thành viên nhóm & Đồ án
 * **Môn học:** Lập trình di động / Đồ án nhóm
-* **Nền tảng:** Android (Kotlin), XML Layout, RESTful API (MyMemory API)
+* **Nền tảng:** Android (Kotlin), XML Layout, RESTful API (MyMemory API), Kotlin Coroutines, ViewBinding
 
 ---
 
 ## 🚀 Các tính năng chính
-1. **Dịch văn bản đa ngôn ngữ:** Hỗ trợ dịch giữa Tiếng Anh, Tiếng Việt, Tiếng Pháp, Tiếng Nhật, Tiếng Hàn và Tiếng Trung. Gọi trực tiếp từ MyMemory API miễn phí.
-2. **Phát âm văn bản (Text-to-Speech):** Đọc to văn bản gốc và kết quả dịch bằng giọng nói chuẩn bản xứ.
-3. **Đổi chiều ngôn ngữ nhanh (Swap):** Đảo ngược ngôn ngữ nguồn, ngôn ngữ đích và cả nội dung văn bản tức thì.
-4. **Sao chép văn bản (Copy to Clipboard):** Sao chép kết quả dịch sang bộ nhớ tạm chỉ với một chạm.
-5. **Xóa nhanh (Clear text):** Nút xóa nhanh tự động hiển thị khi người dùng nhập văn bản để làm sạch ô nhập liệu.
+1. **Dịch văn bản đa ngôn ngữ:** Hỗ trợ dịch giữa Tiếng Anh, Tiếng Việt, Tiếng Pháp, Tiếng Nhật, Tiếng Hàn và Tiếng Trung trực tiếp qua MyMemory API miễn phí.
+2. **Đổi chiều ngôn ngữ thông minh (Swap):** Đảo ngược ngôn ngữ nguồn, ngôn ngữ đích và tự động hoán đổi nội dung văn bản tức thì.
+3. **Sao chép văn bản (Copy to Clipboard):** Sao chép kết quả dịch sang bộ nhớ tạm nhanh chóng chỉ với một chạm.
+4. **Xóa nhanh văn bản (Clear text):** Nút xóa nhanh thông minh tự động hiển thị khi người dùng nhập văn bản để dọn sạch ô nhập liệu.
+5. **Tối ưu hiệu năng & Tránh xung đột:** Tự động hủy yêu cầu dịch cũ (`Job Cancel`) khi người dùng bấm dịch liên tục, đồng thời tự động giải mã các ký tự HTML Entity chuẩn xác.
 
 ---
 
 ## 🛠️ Cấu trúc dự án
-* `app/src/main/java/com/example/googletranslateclone/MainActivity.kt`: Xử lý logic giao diện, gọi API dịch thuật và tương tác Text-to-Speech.
-* `app/src/main/res/layout/activity_main.xml`: Giao diện XML của ứng dụng.
-* `app/src/main/AndroidManifest.xml`: Cấu hình quyền `INTERNET` và cấu hình ứng dụng.
+* `app/src/main/java/com/example/googletranslateclone/MainActivity.kt`: Xử lý logic giao diện, gọi API dịch thuật và quản lý luồng bất đồng bộ với Kotlin Coroutines (`lifecycleScope`).
+* `app/src/main/res/layout/activity_main.xml`: Giao diện XML chuẩn Material Design kết hợp hệ thống Vector Drawables (`ic_swap`, `ic_clear`, `ic_copy`).
+* `app/src/main/AndroidManifest.xml`: Cấu hình quyền `INTERNET` và khởi chạy ứng dụng.
 
 ---
 
