@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">Google Translate Clone</string>
+    <string name="title_app">Google Translate</string>
+    <string name="hint_input">Nhập văn bản cần dịch...</string>
+    <string name="btn_translate">Dịch văn bản</string>
+    <string name="default_result">Bản dịch sẽ hiển thị ở đây</string>
+    <string name="translating">Đang dịch...</string>
+    <string name="msg_input_empty">Vui lòng nhập văn bản!</string>
+    <string name="msg_copied">Đã sao chép vào bộ nhớ tạm!</string>
+    <string name="msg_nothing_to_copy">Không có nội dung để sao chép!</string>
+    <string name="error_network">Lỗi: Không thể kết nối. Hãy kiểm tra Internet!</string>
 </resources>
