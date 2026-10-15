@@ -3,7 +3,7 @@ package com.example.googletranslateclone
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.os.Bundle
-import android.speech.tts.TextToSpeech
+import android.text.Html
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Toast
@@ -11,19 +11,20 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
 import com.example.googletranslateclone.databinding.ActivityMainBinding
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private var tts: TextToSpeech? = null
+    private var translateJob: Job? = null
 
     private val langMap = mapOf(
         "Tiếng Việt" to "vi",
@@ -41,10 +42,6 @@ class MainActivity : AppCompatActivity() {
 
         setupSpinners()
         setupEvents()
-
-        tts = TextToSpeech(this) { status ->
-            if (status == TextToSpeech.SUCCESS) tts?.language = Locale.ENGLISH
-        }
     }
 
     private fun setupSpinners() {
@@ -58,12 +55,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupEvents() {
-        // Tự động ẩn/hiện nút xóa nhanh
+        // Tự động ẩn/hiện nút xóa nhanh khi người dùng nhập văn bản
         binding.edtSource.addTextChangedListener { text ->
             binding.btnClear.visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
         }
 
-        // Nút xóa nhanh
+        // Nút xóa nhanh văn bản nguồn và reset kết quả
         binding.btnClear.setOnClickListener {
             binding.edtSource.text?.clear()
             binding.tvTarget.text = getString(R.string.default_result)
@@ -81,7 +78,7 @@ class MainActivity : AppCompatActivity() {
             callTranslateApi(text, currentSourceLang(), currentTargetLang())
         }
 
-        // Nút đổi chiều ngôn ngữ và nội dung
+        // Nút đổi chiều ngôn ngữ và hoán đổi nội dung văn bản
         binding.btnSwap.setOnClickListener {
             val tempPos = binding.spSourceLang.selectedItemPosition
             binding.spSourceLang.setSelection(binding.spTargetLang.selectedItemPosition)
@@ -96,7 +93,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Nút sao chép kết quả
+        // Nút sao chép kết quả dịch
         binding.btnCopy.setOnClickListener {
             val targetText = binding.tvTarget.text.toString().trim()
             if (!isValidTranslation(targetText)) {
@@ -107,34 +104,34 @@ class MainActivity : AppCompatActivity() {
             clipboard.setPrimaryClip(ClipData.newPlainText("Translated Text", targetText))
             Toast.makeText(this, getString(R.string.msg_copied), Toast.LENGTH_SHORT).show()
         }
-
-        // Phát âm văn bản nguồn
-        binding.btnSpeakSource.setOnClickListener {
-            speakOut(binding.edtSource.text.toString(), currentSourceLang())
-        }
-
-        // Phát âm kết quả dịch
-        binding.btnSpeakTarget.setOnClickListener {
-            speakOut(binding.tvTarget.text.toString(), currentTargetLang())
-        }
     }
 
     private fun callTranslateApi(text: String, sourceLang: String, targetLang: String) {
-        lifecycleScope.launch(Dispatchers.IO) {
+        // Hủy yêu cầu dịch trước đó nếu người dùng bấm dịch liên tục
+        translateJob?.cancel()
+
+        translateJob = lifecycleScope.launch(Dispatchers.IO) {
             val result = try {
                 val encodedText = URLEncoder.encode(text, "UTF-8")
-                val apiUrl = "https://api.mymemory.translated.net/get?q=$encodedText&langpair=$sourceLang%7C$targetLang"
+                val langPair = URLEncoder.encode("$sourceLang|$targetLang", "UTF-8")
+                val apiUrl = "https://api.mymemory.translated.net/get?q=$encodedText&langpair=$langPair&de=googletranslateclone@app.com"
+
                 val conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
                     connectTimeout = 6000
                     readTimeout = 6000
                 }
+
                 if (conn.responseCode == HttpURLConnection.HTTP_OK) {
                     val responseStr = conn.inputStream.bufferedReader().use { it.readText() }
-                    JSONObject(responseStr).getJSONObject("responseData").getString("translatedText")
+                    val rawText = JSONObject(responseStr).getJSONObject("responseData").getString("translatedText")
+                    // Giải mã các ký tự HTML Entity (ví dụ: &#39; thành ')
+                    Html.fromHtml(rawText, Html.FROM_HTML_MODE_LEGACY).toString()
                 } else {
-                    "Lỗi kết nối tới API (${conn.responseCode})"
+                    getString(R.string.msg_connection_error, conn.responseCode)
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) return@launch
+                e.printStackTrace()
                 getString(R.string.error_network)
             }
 
@@ -142,19 +139,6 @@ class MainActivity : AppCompatActivity() {
                 binding.tvTarget.text = result
             }
         }
-    }
-
-    private fun speakOut(text: String, langCode: String) {
-        if (text.isBlank() || tts == null) return
-        tts?.language = when (langCode) {
-            "vi" -> Locale("vi", "VN")
-            "fr" -> Locale.FRENCH
-            "ja" -> Locale.JAPANESE
-            "ko" -> Locale.KOREAN
-            "zh" -> Locale.CHINESE
-            else -> Locale.ENGLISH
-        }
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
 
     private fun isValidTranslation(text: String): Boolean {
@@ -166,10 +150,4 @@ class MainActivity : AppCompatActivity() {
 
     private fun currentSourceLang() = langMap[binding.spSourceLang.selectedItem.toString()] ?: "en"
     private fun currentTargetLang() = langMap[binding.spTargetLang.selectedItem.toString()] ?: "vi"
-
-    override fun onDestroy() {
-        tts?.stop()
-        tts?.shutdown()
-        super.onDestroy()
-    }
 }
