@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F8F9FA"
+    android:background="@color/bg_light"
     android:padding="16dp">
 
     <LinearLayout
@@ -13,20 +13,20 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Google Translate"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="#1A73E8"
             android:layout_gravity="center"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"
+            android:text="@string/title_app"
+            android:textColor="@color/primary_blue"
+            android:textSize="24sp"
+            android:textStyle="bold" />
 
         <!-- Thanh chọn ngôn ngữ -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:layout_marginBottom="12dp"
             android:gravity="center_vertical"
-            android:layout_marginBottom="12dp">
+            android:orientation="horizontal">
 
             <Spinner
                 android:id="@+id/spSourceLang"
@@ -39,8 +39,8 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_rotate"
-                android:contentDescription="Swap Language" />
+                android:contentDescription="Swap Language"
+                android:src="@android:drawable/ic_menu_rotate" />
 
             <Spinner
                 android:id="@+id/spTargetLang"
@@ -66,33 +66,34 @@
                     android:id="@+id/edtSource"
                     android:layout_width="match_parent"
                     android:layout_height="120dp"
-                    android:gravity="top|start"
-                    android:inputType="textMultiLine"
-                    android:hint="Nhập văn bản cần dịch..."
                     android:background="@null"
+                    android:gravity="top|start"
+                    android:hint="@string/hint_input"
+                    android:inputType="textMultiLine"
                     android:textSize="16sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="end">
+                    android:gravity="end"
+                    android:orientation="horizontal">
 
                     <ImageButton
-                        android:id="@+id/btnMic"
+                        android:id="@+id/btnClear"
                         android:layout_width="44dp"
                         android:layout_height="44dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@android:drawable/ic_btn_speak_now"
-                        android:contentDescription="Speech to text" />
+                        android:contentDescription="Clear input"
+                        android:src="@drawable/ic_clear"
+                        android:visibility="gone" />
 
                     <ImageButton
                         android:id="@+id/btnSpeakSource"
                         android:layout_width="44dp"
                         android:layout_height="44dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@android:drawable/ic_lock_silent_mode_off"
-                        android:contentDescription="Speak source" />
+                        android:contentDescription="Speak source"
+                        android:src="@android:drawable/ic_lock_silent_mode_off" />
                 </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -101,11 +102,11 @@
             android:id="@+id/btnTranslate"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:text="Dịch văn bản"
-            android:textSize="16sp"
-            android:backgroundTint="#1A73E8"
-            android:textColor="#FFFFFF"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"
+            android:backgroundTint="@color/primary_blue"
+            android:text="@string/btn_translate"
+            android:textColor="@color/white"
+            android:textSize="16sp" />
 
         <!-- Khung hiển thị kết quả -->
         <androidx.cardview.widget.CardView
@@ -116,31 +117,39 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@color/result_bg"
                 android:orientation="vertical"
-                android:padding="12dp"
-                android:background="#E8F0FE">
+                android:padding="12dp">
 
                 <TextView
                     android:id="@+id/tvTarget"
                     android:layout_width="match_parent"
                     android:layout_height="120dp"
-                    android:text="Bản dịch sẽ hiển thị ở đây"
-                    android:textColor="#202124"
+                    android:text="@string/default_result"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="end">
+                    android:gravity="end"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btnCopy"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Copy target"
+                        android:src="@drawable/ic_copy" />
 
                     <ImageButton
                         android:id="@+id/btnSpeakTarget"
                         android:layout_width="44dp"
                         android:layout_height="44dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@android:drawable/ic_lock_silent_mode_off"
-                        android:contentDescription="Speak target" />
+                        android:contentDescription="Speak target"
+                        android:src="@android:drawable/ic_lock_silent_mode_off" />
                 </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
