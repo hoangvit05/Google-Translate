@@ -21,6 +21,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
+// Hosts the translation screen and its user interactions.
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -49,24 +50,24 @@ class MainActivity : AppCompatActivity() {
         binding.spSourceLang.adapter = adapter
         binding.spTargetLang.adapter = adapter
 
-        // Mặc định: Nguồn là Tiếng Anh (index 1), Đích là Tiếng Việt (index 0)
+        // Default source language: English (index 1); target language: Vietnamese (index 0).
         binding.spSourceLang.setSelection(1)
         binding.spTargetLang.setSelection(0)
     }
 
     private fun setupEvents() {
-        // Tự động ẩn/hiện nút xóa nhanh khi người dùng nhập văn bản
+        // Show the clear button only when the source field contains text.
         binding.edtSource.addTextChangedListener { text ->
             binding.btnClear.visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
         }
 
-        // Nút xóa nhanh văn bản nguồn và reset kết quả
+        // Clear the source text and reset the translation result.
         binding.btnClear.setOnClickListener {
             binding.edtSource.text?.clear()
             binding.tvTarget.text = getString(R.string.default_result)
         }
 
-        // Nút dịch văn bản
+        // Validate the input before starting a translation request.
         binding.btnTranslate.setOnClickListener {
             val text = binding.edtSource.text.toString().trim()
             if (text.isEmpty()) {
@@ -78,7 +79,7 @@ class MainActivity : AppCompatActivity() {
             callTranslateApi(text, currentSourceLang(), currentTargetLang())
         }
 
-        // Nút đổi chiều ngôn ngữ và hoán đổi nội dung văn bản
+        // Swap the selected languages and exchange the source and result text.
         binding.btnSwap.setOnClickListener {
             val tempPos = binding.spSourceLang.selectedItemPosition
             binding.spSourceLang.setSelection(binding.spTargetLang.selectedItemPosition)
@@ -93,7 +94,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Nút sao chép kết quả dịch
+        // Copy a valid translation result to the system clipboard.
         binding.btnCopy.setOnClickListener {
             val targetText = binding.tvTarget.text.toString().trim()
             if (!isValidTranslation(targetText)) {
@@ -107,7 +108,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun callTranslateApi(text: String, sourceLang: String, targetLang: String) {
-        // Hủy yêu cầu dịch trước đó nếu người dùng bấm dịch liên tục
+        // Cancel the previous request so an older response cannot overwrite a newer one.
         translateJob?.cancel()
 
         translateJob = lifecycleScope.launch(Dispatchers.IO) {
@@ -124,7 +125,7 @@ class MainActivity : AppCompatActivity() {
                 if (conn.responseCode == HttpURLConnection.HTTP_OK) {
                     val responseStr = conn.inputStream.bufferedReader().use { it.readText() }
                     val rawText = JSONObject(responseStr).getJSONObject("responseData").getString("translatedText")
-                    // Giải mã các ký tự HTML Entity (ví dụ: &#39; thành ')
+                    // Decode HTML entities returned by the translation API.
                     Html.fromHtml(rawText, Html.FROM_HTML_MODE_LEGACY).toString()
                 } else {
                     getString(R.string.msg_connection_error, conn.responseCode)
