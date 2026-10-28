@@ -60,6 +60,7 @@ class TranslationClient(
                         return@withContext TranslationResult.Error(R.string.error_api_response)
                     }
                     val responseStatus = statusObj
+                    val responseDetails = json.optString("responseDetails", "").lowercase()
 
                     if (responseStatus == 200) {
                         val responseData = json.optJSONObject("responseData")
@@ -71,7 +72,7 @@ class TranslationClient(
                             val decodedText = htmlDecoder(rawText)
                             TranslationResult.Success(decodedText)
                         }
-                    } else if (responseStatus == 429) {
+                    } else if (responseStatus == 429 || (responseStatus == 403 && responseDetails.contains("quota"))) {
                         TranslationResult.Error(R.string.error_api_limit)
                     } else if (responseStatus == 403) {
                         TranslationResult.Error(R.string.error_access_denied)

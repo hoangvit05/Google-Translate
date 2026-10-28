@@ -169,6 +169,32 @@ class TranslationClientTest {
     }
 
     @Test
+    fun testHttp200WithResponseStatus403AndQuotaDetails() = runTest {
+        val mockResponse = """{"responseDetails":"QUOTA EXCEEDED","responseStatus":403}"""
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(200, mockResponse) },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("Xin chào", "vi", "en")
+        assertTrue(result is TranslationResult.Error)
+        assertEquals(R.string.error_api_limit, (result as TranslationResult.Error).messageId)
+    }
+
+    @Test
+    fun testHttp200WithResponseStatus403AccessDenied() = runTest {
+        val mockResponse = """{"responseDetails":"FORBIDDEN","responseStatus":403}"""
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(200, mockResponse) },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("Xin chào", "vi", "en")
+        assertTrue(result is TranslationResult.Error)
+        assertEquals(R.string.error_access_denied, (result as TranslationResult.Error).messageId)
+    }
+
+    @Test
     fun testMissingResponseStatus() = runTest {
         val mockResponse = """{"responseData":{"translatedText":"Hello"}}"""
         val client = TranslationClient(
