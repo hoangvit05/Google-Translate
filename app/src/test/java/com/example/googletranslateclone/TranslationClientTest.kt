@@ -40,19 +40,6 @@ class TranslationClientTest {
     }
 
     @Test
-    fun testApiLimitError() = runTest {
-        val mockResponse = """{"responseDetails":"Quota Exceeded","responseStatus":429}"""
-        val client = TranslationClient(
-            urlProvider = { _, _ -> createMockUrl(200, mockResponse) },
-            htmlDecoder = { it }
-        )
-        
-        val result = client.translate("Xin chào", "vi", "en")
-        assertTrue(result is TranslationResult.Error)
-        assertEquals(R.string.error_api_limit, (result as TranslationResult.Error).messageId)
-    }
-
-    @Test
     fun testMalformedJson() = runTest {
         val mockResponse = """{ bad json """
         val client = TranslationClient(
@@ -82,6 +69,44 @@ class TranslationClientTest {
     fun testHttp429QuotaError() = runTest {
         val client = TranslationClient(
             urlProvider = { _, _ -> createMockUrl(429, "") },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("Xin chào", "vi", "en")
+        assertTrue(result is TranslationResult.Error)
+        assertEquals(R.string.error_api_limit, (result as TranslationResult.Error).messageId)
+    }
+
+    @Test
+    fun testHttp403AccessDeniedError() = runTest {
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(403, "") },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("Xin chào", "vi", "en")
+        assertTrue(result is TranslationResult.Error)
+        assertEquals(R.string.error_access_denied, (result as TranslationResult.Error).messageId)
+    }
+
+    @Test
+    fun testApiLimitErrorViaJsonResponseStatus() = runTest {
+        val mockResponse = """{"responseDetails":"Quota Exceeded","responseStatus":429}"""
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(200, mockResponse) },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("Xin chào", "vi", "en")
+        assertTrue(result is TranslationResult.Error)
+        assertEquals(R.string.error_api_limit, (result as TranslationResult.Error).messageId)
+    }
+
+    @Test
+    fun testApiLimitErrorViaResponseDetails() = runTest {
+        val mockResponse = """{"responseDetails":"QUOTA EXCEEDED","responseStatus":403}"""
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(403, mockResponse) },
             htmlDecoder = { it }
         )
         

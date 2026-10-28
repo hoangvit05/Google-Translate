@@ -1,6 +1,7 @@
 package com.example.googletranslateclone
 
 import android.text.Html
+import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -39,42 +40,50 @@ class TranslationClient(
                 conn.requestMethod = "GET"
 
                 val responseCode = conn.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val responseStr = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = JSONObject(responseStr)
-                    
+                
+                val isSuccess = responseCode == HttpURLConnection.HTTP_OK
+                val stream = if (isSuccess) conn.inputStream else conn.errorStream ?: conn.inputStream
+                
+                if (isSuccess || responseCode == 403 || responseCode == 429) {
+                    val responseStr = stream?.bufferedReader()?.use { it.readText() } ?: ""
+                    val json = try { JSONObject(responseStr) } catch (_: JSONException) { null }
+
+                    if (json == null) {
+                        if (responseCode == 429) return@withContext TranslationResult.Error(R.string.error_api_limit)
+                        if (responseCode == 403) return@withContext TranslationResult.Error(R.string.error_access_denied)
+                        return@withContext TranslationResult.Error(R.string.error_api_response)
+                    }
+
                     if (!json.has("responseStatus")) {
-                        TranslationResult.Error(R.string.error_api_response)
-                    } else {
-                        val responseStatus = json.getInt("responseStatus")
-                        if (responseStatus == 200) {
-                            val responseData = json.optJSONObject("responseData")
-                            val rawText = responseData?.optString("translatedText")
-                            
-                            if (rawText.isNullOrBlank()) {
-                                TranslationResult.Error(R.string.error_api_response)
-                            } else {
-                                // Decode HTML entities returned by the translation API.
-                                val decodedText = htmlDecoder(rawText)
-                                TranslationResult.Success(decodedText)
-                            }
-                        } else if (responseStatus == 429 || responseStatus == 403) {
-                            TranslationResult.Error(R.string.error_api_limit)
-                        } else {
+                        return@withContext TranslationResult.Error(R.string.error_api_response)
+                    }
+                    val responseStatus = json.optInt("responseStatus", responseCode)
+                    val responseDetails = json.optString("responseDetails", "").lowercase()
+
+                    if (responseStatus == 200) {
+                        val responseData = json.optJSONObject("responseData")
+                        val rawText = responseData?.optString("translatedText")
+                        
+                        if (rawText.isNullOrBlank()) {
                             TranslationResult.Error(R.string.error_api_response)
+                        } else {
+                            val decodedText = htmlDecoder(rawText)
+                            TranslationResult.Success(decodedText)
                         }
+                    } else if (responseStatus == 429 || responseDetails.contains("quota")) {
+                        TranslationResult.Error(R.string.error_api_limit)
+                    } else if (responseStatus == 403) {
+                        TranslationResult.Error(R.string.error_access_denied)
+                    } else {
+                        TranslationResult.Error(R.string.error_api_response)
                     }
                 } else {
                     conn.errorStream?.close()
-                    if (responseCode == 429 || responseCode == 403) {
-                        TranslationResult.Error(R.string.error_api_limit)
-                    } else {
-                        TranslationResult.Error(R.string.msg_connection_error, responseCode)
-                    }
+                    TranslationResult.Error(R.string.msg_connection_error, responseCode)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                e.printStackTrace()
+                Log.e("TranslationClient", "Error during translation API call", e)
                 when (e) {
                     is JSONException -> TranslationResult.Error(R.string.error_api_response)
                     is IOException -> TranslationResult.Error(R.string.error_network)

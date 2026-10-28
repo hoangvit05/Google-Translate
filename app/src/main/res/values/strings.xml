@@ -12,7 +12,8 @@
     <string name="msg_connection_error">Lỗi kết nối tới API (%1$d)</string>
     <string name="error_network">Lỗi: Không thể kết nối. Hãy kiểm tra mạng!</string>
     <string name="error_api_response">Lỗi: Phản hồi từ máy chủ không hợp lệ!</string>
-    <string name="error_api_limit">Lỗi: Máy chủ từ chối yêu cầu. Hãy thử lại sau.</string>
+    <string name="error_api_limit">Lỗi: Máy chủ từ chối yêu cầu do vượt quá giới hạn. Hãy thử lại sau.</string>
+    <string name="error_access_denied">Lỗi: Từ chối truy cập máy chủ dịch thuật.</string>
     <string name="desc_swap">Đổi chiều ngôn ngữ</string>
     <string name="desc_clear">Xóa văn bản nguồn</string>
     <string name="desc_copy">Sao chép kết quả dịch</string>
