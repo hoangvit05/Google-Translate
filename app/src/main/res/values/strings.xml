@@ -6,10 +6,13 @@
     <string name="default_result">Bản dịch sẽ hiển thị ở đây</string>
     <string name="translating">Đang dịch...</string>
     <string name="msg_input_empty">Vui lòng nhập văn bản!</string>
+    <string name="msg_input_too_long">Đoạn văn bản quá dài (vượt quá giới hạn 500 bytes).</string>
     <string name="msg_copied">Đã sao chép vào bộ nhớ tạm!</string>
     <string name="msg_nothing_to_copy">Không có nội dung để sao chép!</string>
     <string name="msg_connection_error">Lỗi kết nối tới API (%1$d)</string>
-    <string name="error_network">Lỗi: Không thể kết nối. Hãy kiểm tra Internet!</string>
+    <string name="error_network">Lỗi: Không thể kết nối. Hãy kiểm tra mạng!</string>
+    <string name="error_api_response">Lỗi: Phản hồi từ máy chủ không hợp lệ!</string>
+    <string name="error_api_limit">Lỗi: Máy chủ từ chối yêu cầu. Hãy thử lại sau.</string>
     <string name="desc_swap">Đổi chiều ngôn ngữ</string>
     <string name="desc_clear">Xóa văn bản nguồn</string>
     <string name="desc_copy">Sao chép kết quả dịch</string>

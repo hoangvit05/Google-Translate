@@ -3,29 +3,32 @@ package com.example.googletranslateclone
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.os.Bundle
-import android.text.Html
 import android.view.View
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
 import com.example.googletranslateclone.databinding.ActivityMainBinding
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
+
+enum class TranslationUIState {
+    IDLE, LOADING, SUCCESS, ERROR
+}
 
 // Hosts the translation screen and its user interactions.
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private var translateJob: Job? = null
+    private val translationClient = TranslationClient()
+    
+    private var currentState = TranslationUIState.IDLE
+    private var currentTranslationResult = ""
+    private var isSwapping = false
 
     private val langMap = mapOf(
         "Tiếng Việt" to "vi",
@@ -51,19 +54,35 @@ class MainActivity : AppCompatActivity() {
         binding.spTargetLang.adapter = adapter
 
         // Default source language: English (index 1); target language: Vietnamese (index 0).
-        binding.spSourceLang.setSelection(1)
-        binding.spTargetLang.setSelection(0)
+        binding.spSourceLang.setSelection(1, false)
+        binding.spTargetLang.setSelection(0, false)
+
+        val spinnerListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!isSwapping) {
+                    invalidateCurrentRequest()
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+        binding.spSourceLang.onItemSelectedListener = spinnerListener
+        binding.spTargetLang.onItemSelectedListener = spinnerListener
     }
 
     private fun setupEvents() {
         // Show the clear button only when the source field contains text.
         binding.edtSource.addTextChangedListener { text ->
             binding.btnClear.visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
+            // Invalidate pending request if user edits text
+            if (!isSwapping) {
+                invalidateCurrentRequest()
+            }
         }
 
         // Clear the source text and reset the translation result.
         binding.btnClear.setOnClickListener {
             binding.edtSource.text?.clear()
+            invalidateCurrentRequest()
             binding.tvTarget.text = getString(R.string.default_result)
         }
 
@@ -74,36 +93,69 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, getString(R.string.msg_input_empty), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+            
+            // Check UTF-8 byte limit (500 bytes for MyMemory free API 'q' parameter)
+            if (!InputValidator.isValidLength(text)) {
+                Toast.makeText(this, getString(R.string.msg_input_too_long), Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
-            binding.tvTarget.text = getString(R.string.translating)
             callTranslateApi(text, currentSourceLang(), currentTargetLang())
         }
 
         // Swap the selected languages and exchange the source and result text.
         binding.btnSwap.setOnClickListener {
+            if (currentState != TranslationUIState.SUCCESS) {
+                isSwapping = true
+                val tempPos = binding.spSourceLang.selectedItemPosition
+                binding.spSourceLang.setSelection(binding.spTargetLang.selectedItemPosition)
+                binding.spTargetLang.setSelection(tempPos)
+                isSwapping = false
+                invalidateCurrentRequest()
+                return@setOnClickListener
+            }
+            
+            val previousSource = binding.edtSource.text.toString().trim()
+            val previousTarget = currentTranslationResult
+            
+            isSwapping = true
+            
             val tempPos = binding.spSourceLang.selectedItemPosition
             binding.spSourceLang.setSelection(binding.spTargetLang.selectedItemPosition)
             binding.spTargetLang.setSelection(tempPos)
 
-            val sourceText = binding.edtSource.text.toString().trim()
-            val targetText = binding.tvTarget.text.toString().trim()
-            if (isValidTranslation(targetText)) {
-                binding.edtSource.setText(targetText)
-                binding.edtSource.setSelection(targetText.length)
-                binding.tvTarget.text = sourceText
-            }
+            binding.edtSource.setText(previousTarget)
+            binding.edtSource.setSelection(previousTarget.length)
+            
+            isSwapping = false
+            
+            // Mark new state as success with swapped texts
+            translateJob?.cancel()
+            translateJob = null
+            currentState = TranslationUIState.SUCCESS
+            currentTranslationResult = previousSource
+            binding.tvTarget.text = previousSource
         }
 
         // Copy a valid translation result to the system clipboard.
         binding.btnCopy.setOnClickListener {
-            val targetText = binding.tvTarget.text.toString().trim()
-            if (!isValidTranslation(targetText)) {
+            if (currentState != TranslationUIState.SUCCESS) {
                 Toast.makeText(this, getString(R.string.msg_nothing_to_copy), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("Translated Text", targetText))
+            clipboard.setPrimaryClip(ClipData.newPlainText("Translated Text", currentTranslationResult))
             Toast.makeText(this, getString(R.string.msg_copied), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun invalidateCurrentRequest() {
+        translateJob?.cancel()
+        translateJob = null
+        if (currentState != TranslationUIState.IDLE) {
+            currentState = TranslationUIState.IDLE
+            currentTranslationResult = ""
+            binding.tvTarget.text = getString(R.string.default_result)
         }
     }
 
@@ -111,42 +163,32 @@ class MainActivity : AppCompatActivity() {
         // Cancel the previous request so an older response cannot overwrite a newer one.
         translateJob?.cancel()
 
-        translateJob = lifecycleScope.launch(Dispatchers.IO) {
-            val result = try {
-                val encodedText = URLEncoder.encode(text, "UTF-8")
-                val langPair = URLEncoder.encode("$sourceLang|$targetLang", "UTF-8")
-                val apiUrl = "https://api.mymemory.translated.net/get?q=$encodedText&langpair=$langPair&de=googletranslateclone@app.com"
+        currentState = TranslationUIState.LOADING
+        binding.tvTarget.text = getString(R.string.translating)
 
-                val conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 6000
-                    readTimeout = 6000
+        translateJob = lifecycleScope.launch {
+            val result = translationClient.translate(text, sourceLang, targetLang)
+            
+            if (isActive) {
+                when (result) {
+                    is TranslationResult.Success -> {
+                        currentState = TranslationUIState.SUCCESS
+                        currentTranslationResult = result.text
+                        binding.tvTarget.text = result.text
+                    }
+                    is TranslationResult.Error -> {
+                        currentState = TranslationUIState.ERROR
+                        currentTranslationResult = ""
+                        val errorMessage = if (result.formatArg != null) {
+                            getString(result.messageId, result.formatArg)
+                        } else {
+                            getString(result.messageId)
+                        }
+                        binding.tvTarget.text = errorMessage
+                    }
                 }
-
-                if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                    val responseStr = conn.inputStream.bufferedReader().use { it.readText() }
-                    val rawText = JSONObject(responseStr).getJSONObject("responseData").getString("translatedText")
-                    // Decode HTML entities returned by the translation API.
-                    Html.fromHtml(rawText, Html.FROM_HTML_MODE_LEGACY).toString()
-                } else {
-                    getString(R.string.msg_connection_error, conn.responseCode)
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) return@launch
-                e.printStackTrace()
-                getString(R.string.error_network)
-            }
-
-            withContext(Dispatchers.Main) {
-                binding.tvTarget.text = result
             }
         }
-    }
-
-    private fun isValidTranslation(text: String): Boolean {
-        return text.isNotBlank() &&
-                text != getString(R.string.default_result) &&
-                text != getString(R.string.translating) &&
-                !text.startsWith("Lỗi")
     }
 
     private fun currentSourceLang() = langMap[binding.spSourceLang.selectedItem.toString()] ?: "en"
