@@ -64,9 +64,13 @@ class TranslationClient(
 
                     if (responseStatus == 200) {
                         val responseData = json.optJSONObject("responseData")
-                        val rawText = responseData?.optString("translatedText")
+                        if (responseData == null) {
+                            return@withContext TranslationResult.Error(R.string.error_api_response)
+                        }
                         
-                        if (rawText.isNullOrBlank()) {
+                        val rawText = responseData.optString("translatedText")
+                        
+                        if (rawText.isNullOrBlank() || rawText == "null") {
                             TranslationResult.Error(R.string.error_api_response)
                         } else {
                             val decodedText = htmlDecoder(rawText)

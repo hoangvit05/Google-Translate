@@ -195,6 +195,32 @@ class TranslationClientTest {
     }
 
     @Test
+    fun testNullStringTranslatedText() = runTest {
+        val mockResponse = """{"responseStatus":200, "responseData":{"translatedText":"null"}}"""
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(200, mockResponse) },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("Le bonheur...", "fr", "vi")
+        assertTrue(result is TranslationResult.Error)
+        assertEquals(R.string.error_api_response, (result as TranslationResult.Error).messageId)
+    }
+
+    @Test
+    fun testLiteralNullTranslatedText() = runTest {
+        val mockResponse = """{"responseStatus":200, "responseData":{"translatedText":null}}"""
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(200, mockResponse) },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("Le bonheur...", "fr", "vi")
+        assertTrue(result is TranslationResult.Error)
+        assertEquals(R.string.error_api_response, (result as TranslationResult.Error).messageId)
+    }
+
+    @Test
     fun testMissingResponseStatus() = runTest {
         val mockResponse = """{"responseData":{"translatedText":"Hello"}}"""
         val client = TranslationClient(
