@@ -26,6 +26,20 @@ class TranslationClientTest {
     }
 
     @Test
+    fun testValidTranslationStartingWithLoi() = runTest {
+        // Legitimate translation starting with "Lỗi" must remain valid
+        val mockResponse = """{"responseData":{"translatedText":"Lỗi hệ thống"},"responseStatus":200}"""
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(200, mockResponse) },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("System error", "en", "vi")
+        assertTrue(result is TranslationResult.Success)
+        assertEquals("Lỗi hệ thống", (result as TranslationResult.Success).text)
+    }
+
+    @Test
     fun testApiLimitError() = runTest {
         val mockResponse = """{"responseDetails":"Quota Exceeded","responseStatus":429}"""
         val client = TranslationClient(
@@ -62,6 +76,18 @@ class TranslationClientTest {
         assertTrue(result is TranslationResult.Error)
         assertEquals(R.string.msg_connection_error, (result as TranslationResult.Error).messageId)
         assertEquals(500, result.formatArg)
+    }
+
+    @Test
+    fun testHttp429QuotaError() = runTest {
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(429, "") },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("Xin chào", "vi", "en")
+        assertTrue(result is TranslationResult.Error)
+        assertEquals(R.string.error_api_limit, (result as TranslationResult.Error).messageId)
     }
 
     @Test

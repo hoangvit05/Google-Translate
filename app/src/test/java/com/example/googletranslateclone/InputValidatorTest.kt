@@ -7,6 +7,27 @@ import org.junit.Test
 class InputValidatorTest {
 
     @Test
+    fun testEmptyAndWhitespace() {
+        assertTrue(InputValidator.isValidLength(""))
+        assertTrue(InputValidator.isValidLength("   "))
+    }
+
+    @Test
+    fun testCJKCharacters() {
+        // Japanese: "こんにちは" (Konnichiwa) - 5 characters, 15 bytes in UTF-8
+        val jaText = "こんにちは"
+        assertTrue(InputValidator.isValidLength(jaText))
+        
+        // Chinese: "你好" (Ni Hao) - 2 characters, 6 bytes in UTF-8
+        val zhText = "你好"
+        assertTrue(InputValidator.isValidLength(zhText))
+        
+        // Repeat to exceed 500 bytes. 34 repeats of 15 bytes = 510 bytes
+        val longJaText = jaText.repeat(34)
+        assertFalse(InputValidator.isValidLength(longJaText))
+    }
+
+    @Test
     fun testValidLength() {
         // ASCII
         assertTrue(InputValidator.isValidLength("Hello"))

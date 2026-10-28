@@ -110,7 +110,9 @@ class MainActivity : AppCompatActivity() {
                 val tempPos = binding.spSourceLang.selectedItemPosition
                 binding.spSourceLang.setSelection(binding.spTargetLang.selectedItemPosition)
                 binding.spTargetLang.setSelection(tempPos)
-                isSwapping = false
+                binding.root.post {
+                    isSwapping = false
+                }
                 invalidateCurrentRequest()
                 return@setOnClickListener
             }
@@ -127,7 +129,9 @@ class MainActivity : AppCompatActivity() {
             binding.edtSource.setText(previousTarget)
             binding.edtSource.setSelection(previousTarget.length)
             
-            isSwapping = false
+            binding.root.post {
+                isSwapping = false
+            }
             
             // Mark new state as success with swapped texts
             translateJob?.cancel()

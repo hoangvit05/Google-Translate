@@ -65,7 +65,12 @@ class TranslationClient(
                         }
                     }
                 } else {
-                    TranslationResult.Error(R.string.msg_connection_error, responseCode)
+                    conn.errorStream?.close()
+                    if (responseCode == 429 || responseCode == 403) {
+                        TranslationResult.Error(R.string.error_api_limit)
+                    } else {
+                        TranslationResult.Error(R.string.msg_connection_error, responseCode)
+                    }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
