@@ -41,24 +41,25 @@ class TranslationClient(
 
                 val responseCode = conn.responseCode
                 
-                val isSuccess = responseCode == HttpURLConnection.HTTP_OK
-                val stream = if (isSuccess) conn.inputStream else conn.errorStream ?: conn.inputStream
+                val stream = if (responseCode == HttpURLConnection.HTTP_OK) {
+                    conn.inputStream
+                } else {
+                    conn.errorStream
+                }
                 
-                if (isSuccess || responseCode == 403 || responseCode == 429) {
-                    val responseStr = stream?.bufferedReader()?.use { it.readText() } ?: ""
-                    val json = try { JSONObject(responseStr) } catch (_: JSONException) { null }
+                val responseStr = stream?.bufferedReader()?.use { it.readText() } ?: ""
+                val json = try { JSONObject(responseStr) } catch (_: JSONException) { null }
 
+                if (responseCode == HttpURLConnection.HTTP_OK) {
                     if (json == null) {
-                        if (responseCode == 429) return@withContext TranslationResult.Error(R.string.error_api_limit)
-                        if (responseCode == 403) return@withContext TranslationResult.Error(R.string.error_access_denied)
                         return@withContext TranslationResult.Error(R.string.error_api_response)
                     }
 
-                    if (!json.has("responseStatus")) {
+                    val statusObj = json.opt("responseStatus")
+                    if (statusObj !is Int) {
                         return@withContext TranslationResult.Error(R.string.error_api_response)
                     }
-                    val responseStatus = json.optInt("responseStatus", responseCode)
-                    val responseDetails = json.optString("responseDetails", "").lowercase()
+                    val responseStatus = statusObj
 
                     if (responseStatus == 200) {
                         val responseData = json.optJSONObject("responseData")
@@ -70,7 +71,7 @@ class TranslationClient(
                             val decodedText = htmlDecoder(rawText)
                             TranslationResult.Success(decodedText)
                         }
-                    } else if (responseStatus == 429 || responseDetails.contains("quota")) {
+                    } else if (responseStatus == 429) {
                         TranslationResult.Error(R.string.error_api_limit)
                     } else if (responseStatus == 403) {
                         TranslationResult.Error(R.string.error_access_denied)
@@ -78,12 +79,23 @@ class TranslationClient(
                         TranslationResult.Error(R.string.error_api_response)
                     }
                 } else {
-                    conn.errorStream?.close()
-                    TranslationResult.Error(R.string.msg_connection_error, responseCode)
+                    val responseDetails = json?.optString("responseDetails", "")?.lowercase() ?: ""
+                    
+                    if (responseCode == 429) {
+                        TranslationResult.Error(R.string.error_api_limit)
+                    } else if (responseCode == 403) {
+                        if (responseDetails.contains("quota")) {
+                            TranslationResult.Error(R.string.error_api_limit)
+                        } else {
+                            TranslationResult.Error(R.string.error_access_denied)
+                        }
+                    } else {
+                        TranslationResult.Error(R.string.msg_connection_error, responseCode)
+                    }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e("TranslationClient", "Error during translation API call", e)
+                Log.e("TranslationClient", "Translation API request failed with: ${e.javaClass.simpleName}")
                 when (e) {
                     is JSONException -> TranslationResult.Error(R.string.error_api_response)
                     is IOException -> TranslationResult.Error(R.string.error_network)

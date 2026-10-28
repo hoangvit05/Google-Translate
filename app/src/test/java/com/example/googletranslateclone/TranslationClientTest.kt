@@ -9,6 +9,7 @@ import java.net.URL
 import java.net.URLStreamHandler
 import java.net.URLConnection
 import java.io.ByteArrayInputStream
+import java.io.IOException
 
 class TranslationClientTest {
 
@@ -116,6 +117,58 @@ class TranslationClientTest {
     }
 
     @Test
+    fun testInvalidResponseStatusType() = runTest {
+        val mockResponse = """{"responseData":{"translatedText":"Hello"},"responseStatus":"200"}"""
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(200, mockResponse) },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("Xin chào", "vi", "en")
+        assertTrue(result is TranslationResult.Error)
+        assertEquals(R.string.error_api_response, (result as TranslationResult.Error).messageId)
+    }
+
+    @Test
+    fun testHttp403WithSuccessJsonStillFails() = runTest {
+        val mockResponse = """{"responseData":{"translatedText":"Hello"},"responseStatus":200}"""
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(403, mockResponse) },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("Xin chào", "vi", "en")
+        assertTrue(result is TranslationResult.Error)
+        assertEquals(R.string.error_access_denied, (result as TranslationResult.Error).messageId)
+    }
+
+    @Test
+    fun testHttp429WithSuccessJsonStillFails() = runTest {
+        val mockResponse = """{"responseData":{"translatedText":"Hello"},"responseStatus":200}"""
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(429, mockResponse) },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("Xin chào", "vi", "en")
+        assertTrue(result is TranslationResult.Error)
+        assertEquals(R.string.error_api_limit, (result as TranslationResult.Error).messageId)
+    }
+
+    @Test
+    fun testHttp500WithEmptyErrorStream() = runTest {
+        val client = TranslationClient(
+            urlProvider = { _, _ -> createMockUrl(500, "") },
+            htmlDecoder = { it }
+        )
+        
+        val result = client.translate("Xin chào", "vi", "en")
+        assertTrue(result is TranslationResult.Error)
+        assertEquals(R.string.msg_connection_error, (result as TranslationResult.Error).messageId)
+        assertEquals(500, result.formatArg)
+    }
+
+    @Test
     fun testMissingResponseStatus() = runTest {
         val mockResponse = """{"responseData":{"translatedText":"Hello"}}"""
         val client = TranslationClient(
@@ -149,7 +202,8 @@ class TranslationClientTest {
                     override fun disconnect() {}
                     override fun usingProxy(): Boolean = false
                     override fun getResponseCode(): Int = statusCode
-                    override fun getInputStream() = ByteArrayInputStream(responseBody.toByteArray())
+                    override fun getInputStream() = if (statusCode == 200) ByteArrayInputStream(responseBody.toByteArray()) else throw IOException("Server returned HTTP response code: $statusCode")
+                    override fun getErrorStream() = if (statusCode != 200) ByteArrayInputStream(responseBody.toByteArray()) else null
                 }
             }
         }
